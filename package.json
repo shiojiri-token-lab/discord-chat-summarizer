@@ -1,0 +1,11 @@
+{
+  "name": "discord-bot",
+  "version": "1.0.0",
+  "scripts": {},
+  "author": "Aoi Makino <aoimakino2003@gmail.com>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.0",
+  "dependencies": {
+    "discord-interactions": "^4.3.0"
+  }
+}

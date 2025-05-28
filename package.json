@@ -1,11 +1,26 @@
 {
-  "name": "discord-bot",
-  "version": "1.0.0",
-  "scripts": {},
-  "author": "Aoi Makino <aoimakino2003@gmail.com>",
-  "license": "MIT",
-  "packageManager": "pnpm@10.11.0",
-  "dependencies": {
-    "discord-interactions": "^4.3.0"
-  }
+	"name": "discord-bot",
+	"version": "1.0.0",
+	"scripts": {
+		"dev": "tsx --watch src/index.ts",
+		"register": "tsx scripts/register.ts",
+		"unregister": "tsx scripts/unregister.ts",
+		"build": "tsc",
+		"start": "node dist"
+	},
+	"author": "Aoi Makino <aoimakino2003@gmail.com>",
+	"license": "MIT",
+	"packageManager": "pnpm@10.11.0",
+	"dependencies": {
+		"@google/genai": "^1.1.0",
+		"discord-interactions": "^4.3.0",
+		"dotenv": "^16.5.0",
+		"express": "^5.1.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.9.4",
+		"@types/express": "^5.0.2",
+		"tsx": "^4.19.4",
+		"typescript": "^5.8.3"
+	}
 }

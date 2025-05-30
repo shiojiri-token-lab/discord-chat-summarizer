@@ -10,12 +10,13 @@ import express from "express";
 
 const endpoint = "https://discord.com/api/v10";
 
+const appId = process.env.APP_ID;
 const publicKey = process.env.PUBLIC_KEY;
 const discordToken = process.env.DISCORD_TOKEN;
 
-if (!publicKey || !discordToken) {
+if (!appId || !publicKey || !discordToken) {
 	console.error(
-		"PUBLIC_KEY and DISCORD_TOKEN must be set in environment variables.",
+		"APP_ID, PUBLIC_KEY and DISCORD_TOKEN must be set in environment variables.",
 	);
 	process.exit(1);
 }
@@ -37,7 +38,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const app = express();
 
 app.post("/interactions", verifyKeyMiddleware(publicKey), (req, res) => {
-	const { type, data, id, channel_id } = req.body;
+	const { type, data, id, channel_id, token } = req.body;
 
 	if (type === InteractionType.PING) {
 		res.send({
@@ -61,6 +62,10 @@ app.post("/interactions", verifyKeyMiddleware(publicKey), (req, res) => {
 
 				return;
 			}
+
+			res.send({
+				type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+			});
 
 			const now = new Date();
 			const nDaysAgo = new Date(
@@ -147,17 +152,19 @@ app.post("/interactions", verifyKeyMiddleware(publicKey), (req, res) => {
 						.join("\n");
 
 					const prompt = `
-以下のチャット会話履歴を要約し、その結果をMarkdown形式で記述してください。
-要約内で特定のユーザーに言及する必要がある場合は、必ずDiscordのメンション形式\`<@ユーザーID>\`を使用して、ユーザー名は含めないでください。
+以下のチャット会話履歴を要約してください。
+要約はリスト形式ではなく、文脈や話題ごとにセクション分けし、1000文字以内のわかりやすい文章でまとめてください。各セクションには適切な見出し（Markdownの##や###など）を付けてください。
+また、要約の最後には「タスクの進行状況」というセクションを設け、言及されているタスクがあれば「完了したタスク」と「未完了のタスク」のセクションに分けてそれぞれリストアップしてください。
+各タスクの担当者が明確な場合は、Discordのメンション形式\`<@ユーザーID>\`に続けてどのようなタスクかを具体的に書いてください。要約内で特定のユーザーに言及する必要がある場合は、必ずDiscordのメンション形式\`<@ユーザーID>\`を使用し、ユーザー名は含めないでください。
 会話履歴中の\`<@ユーザーID>\`や各発言の末尾にある\`<@ユーザーID> (ユーザー名)\`も参考に、該当するユーザーのIDを使ってメンションを生成してください。
 
-## 登場人物 (ユーザー名とDiscordユーザーID)
+## 登場人物 (ユーザーIDとユーザー名)
 ${usersListText.length > 0 ? usersListText : "(登場人物情報なし)"}
 
 ## 会話履歴
 ${chatHistoryText}
 
-## 要約 (Markdown形式、Discordメンション使用)
+## 要約
 `;
 
 					return prompt;
@@ -169,10 +176,25 @@ ${chatHistoryText}
 					});
 				})
 				.then((response) => {
-					res.send({
-						type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-						data: { content: response.text },
-					});
+					return fetch(
+						`${endpoint}/webhooks/${appId}/${token}/messages/@original`,
+						{
+							method: "PATCH",
+							headers: {
+								Authorization: `Bot ${discordToken}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								embeds: [
+									{
+										title: `このチャンネルの過去${days}日間のまとめ`,
+										description: response.text,
+										color: 0x00bfff,
+									},
+								],
+							}),
+						},
+					);
 				})
 				.catch((error) => console.error(error));
 		}
